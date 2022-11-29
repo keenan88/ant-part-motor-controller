@@ -1,16 +1,5 @@
 #include "motor_interface.h"
 #include "esp_log.h"
-
-#include <driver/dac.h>
-#include "driver/ledc.h"
-#include "driver/pcnt.h"
-#include "driver/mcpwm.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "rcCheck.h"
-
-
 /**
  * @brief This contains the interface for a clearpath motor with the
  *          velocity controller setup, with the motor direction on the A pin
@@ -18,6 +7,24 @@
  *          The motor encoder is the velocity output
  */
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+
+#define RCCHECK(fn)                                                                      \
+    {                                                                                    \
+        rcl_ret_t temp_rc = fn;                                                          \
+        if ((temp_rc != RCL_RET_OK))                                                     \
+        {                                                                                \
+            printf("Failed status on line %d: %d. Aborting.\n", __LINE__, (int)temp_rc); \
+            vTaskDelete(NULL);                                                           \
+        }                                                                                \
+    }
+#define RCSOFTCHECK(fn)                                                                    \
+    {                                                                                      \
+        rcl_ret_t temp_rc = fn;                                                            \
+        if ((temp_rc != RCL_RET_OK))                                                       \
+        {                                                                                  \
+            printf("Failed status on line %d: %d. Continuing.\n", __LINE__, (int)temp_rc); \
+        }                                                                                  \
+    }
 
 #define MAX_PWM_BITS (8191)
 
@@ -120,7 +127,8 @@ static void copy_motor_pins(motor_interface_t *interface, clearpath_motor_pins_t
  * @param io_conf the io configuration object
  */
 
-void init_motor_interface_base(motor_interface_t *interface, clearpath_motor_pins_t *motor_pins, gpio_config_t *io_conf, uint8_t channel)
+void init_motor_interface_base(motor_interface_t *interface, clearpath_motor_pins_t *motor_pins,
+                               gpio_config_t *io_conf, uint8_t channel)
 {
     copy_motor_pins(interface, motor_pins);
     setup_gpio_config(interface, io_conf);
