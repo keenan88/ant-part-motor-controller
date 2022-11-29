@@ -17,4 +17,4 @@
 void init_ros_motor_interface(rcl_node_t *node_handle, rclc_support_t *support,
                               rcl_allocator_t *allocator, rclc_executor_t *executor);
 
-void cleanup_motor_interface();
+void cleanup_motor_interface(rcl_node_t* node_handle);
