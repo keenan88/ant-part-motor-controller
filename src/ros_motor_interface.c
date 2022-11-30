@@ -1,9 +1,9 @@
 #include "ros_motor_interface.h"
 #include "rcCheck.h"
 
-#define RADS_TO_RPM_CONVERSION_RATIO (9.5493)
-#define INSIDE_WHEEL_RADIUS (0.095)
-#define OUTSIDE_WHEEL_RADIUS (0.095)
+#define RPS_TO_RPM_RATIO (60)
+#define INSIDE_WHEEL_RADIUS (0.075)
+#define OUTSIDE_WHEEL_RADIUS (0.075)
 
 #define EXECUTOR_NUMBER_COUNTER (7)
 #define GEAR_REDUCTION_RATIO (10.71)
@@ -12,7 +12,7 @@ motor_interface_t fr_motor;
 motor_interface_t fl_motor;
 motor_interface_t rl_motor;
 motor_interface_t rr_motor;
-std_msgs__msg__Float64MultiArray float_msg;
+std_msgs__msg__Float64MultiArray commanded_revs_per_s;
 rcl_subscription_t cmd_vel_subscriber;
 
 gpio_config_t io_conf = {};
@@ -63,7 +63,7 @@ clearpath_motor_pins_t rr_motor_pins =
 // {
 //     geometry_msgs__msg__Twist *cmd_vel_msg = (geometry_msgs__msg__Twist *)msg;
 //     double linear_velocity = cmd_vel_msg->linear.x;
-//     double wheel_rpm = linear_velocity * RADS_TO_RPM_CONVERSION_RATIO * REDUCTION_RATIO / 0.195;
+//     double wheel_rpm = linear_velocity * RPS_TO_RPM_RATIO * REDUCTION_RATIO / 0.195;
 //     set_motor_rpm(&motor_interface.fr_motor, wheel_rpm);
 //     set_motor_rpm(&motor_interface.fl_motor, wheel_rpm);
 //     set_motor_rpm(&motor_interface.rl_motor, wheel_rpm);
@@ -81,12 +81,12 @@ clearpath_motor_pins_t rr_motor_pins =
 
 static void subscriber_timer_callback(const void * msg)
 {
-    std_msgs__msg__Float64MultiArray * float_msg = (std_msgs__msg__Float64MultiArray*) msg;
+    std_msgs__msg__Float64MultiArray * commanded_revs_per_s = (std_msgs__msg__Float64MultiArray*) msg;
 
-    double fr_wheel_speed = float_msg->data.data[0] * RADS_TO_RPM_CONVERSION_RATIO * GEAR_REDUCTION_RATIO;
-    double fl_wheel_speed = float_msg->data.data[1] * RADS_TO_RPM_CONVERSION_RATIO * GEAR_REDUCTION_RATIO;
-    double rr_wheel_speed = float_msg->data.data[2] * RADS_TO_RPM_CONVERSION_RATIO * GEAR_REDUCTION_RATIO;
-    double rl_wheel_speed = float_msg->data.data[3] * RADS_TO_RPM_CONVERSION_RATIO * GEAR_REDUCTION_RATIO;
+    double fr_wheel_speed = commanded_revs_per_s->data.data[0] * RPS_TO_RPM_RATIO * GEAR_REDUCTION_RATIO;
+    double fl_wheel_speed = commanded_revs_per_s->data.data[1] * RPS_TO_RPM_RATIO * GEAR_REDUCTION_RATIO;
+    double rr_wheel_speed = commanded_revs_per_s->data.data[2] * RPS_TO_RPM_RATIO * GEAR_REDUCTION_RATIO;
+    double rl_wheel_speed = commanded_revs_per_s->data.data[3] * RPS_TO_RPM_RATIO * GEAR_REDUCTION_RATIO;
 
     set_motor_rpm(&fr_motor, fr_wheel_speed);
     set_motor_rpm(&fl_motor, fl_wheel_speed);
@@ -103,18 +103,18 @@ void init_ros_motor_interface(rcl_node_t *node_handle, rclc_support_t *support,
     init_motor_interface_base(&rl_motor, &rl_motor_pins, &io_conf, 2);
     init_motor_interface_base(&rr_motor, &rr_motor_pins, &io_conf, 3);
 
-    float_msg.data.capacity = 100;
-    float_msg.data.size = 0;
-    float_msg.data.data = (float_t*) malloc(float_msg.data.capacity * sizeof(float_t));
+    commanded_revs_per_s.data.capacity = 100;
+    commanded_revs_per_s.data.size = 0;
+    commanded_revs_per_s.data.data = (float_t*) malloc(commanded_revs_per_s.data.capacity * sizeof(float_t));
 
-    float_msg.layout.dim.capacity = 100;
-    float_msg.layout.dim.size = 0;
-    float_msg.layout.dim.data = (std_msgs__msg__MultiArrayDimension*) malloc(float_msg.layout.dim.capacity * sizeof(std_msgs__msg__MultiArrayDimension));
+    commanded_revs_per_s.layout.dim.capacity = 100;
+    commanded_revs_per_s.layout.dim.size = 0;
+    commanded_revs_per_s.layout.dim.data = (std_msgs__msg__MultiArrayDimension*) malloc(commanded_revs_per_s.layout.dim.capacity * sizeof(std_msgs__msg__MultiArrayDimension));
 
-    for(size_t i =0; i < float_msg.layout.dim.capacity; i++) {
-        float_msg.layout.dim.data[i].label.capacity = 20;
-        float_msg.layout.dim.data[i].label.size = 0;
-        float_msg.layout.dim.data[i].label.data = (char*) malloc(float_msg.layout.dim.data[i].label.capacity * sizeof(char));
+    for(size_t i =0; i < commanded_revs_per_s.layout.dim.capacity; i++) {
+        commanded_revs_per_s.layout.dim.data[i].label.capacity = 20;
+        commanded_revs_per_s.layout.dim.data[i].label.size = 0;
+        commanded_revs_per_s.layout.dim.data[i].label.data = (char*) malloc(commanded_revs_per_s.layout.dim.data[i].label.capacity * sizeof(char));
     }
 
     RCCHECK(rclc_subscription_init_default(
@@ -127,7 +127,7 @@ void init_ros_motor_interface(rcl_node_t *node_handle, rclc_support_t *support,
     RCCHECK(rclc_executor_add_subscription(
         executor,
         &cmd_vel_subscriber,
-        &float_msg,
+        &commanded_revs_per_s,
         // &motor_interface.cmd_vel_msg,
         subscriber_timer_callback,
         // cmd_vel_sub_callback,
