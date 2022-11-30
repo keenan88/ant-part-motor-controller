@@ -2,8 +2,6 @@
 #include "rcCheck.h"
 
 #define RPS_TO_RPM_RATIO (60)
-#define INSIDE_WHEEL_RADIUS (0.075)
-#define OUTSIDE_WHEEL_RADIUS (0.075)
 
 #define EXECUTOR_NUMBER_COUNTER (7)
 #define GEAR_REDUCTION_RATIO (10.71)
